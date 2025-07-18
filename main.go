@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/LouisRemes-95/PokedexCLI/internal"
 )
 
 type cliCommand struct {
@@ -32,6 +34,8 @@ func initCommands() {
 func main() {
 
 	initCommands()
+
+	fmt.Print(internal.GetLocation(1))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
