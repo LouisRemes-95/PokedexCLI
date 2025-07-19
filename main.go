@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/LouisRemes-95/PokedexCLI/internal"
+	pokeapi "github.com/LouisRemes-95/PokedexCLI/internal/pokeapi"
 )
 
 type cliCommand struct {
@@ -17,7 +17,7 @@ type cliCommand struct {
 
 var registerOfCommands = map[string]cliCommand{}
 
-var locations = internal.LocationAreas{
+var locations = pokeapi.LocationAreas{
 	Next:     "https://pokeapi.co/api/v2/location-area",
 	Previous: "",
 }
@@ -101,8 +101,7 @@ func commandMap() error {
 	}
 
 	var err error
-	locations, err = internal.GetLocations(locations.Next)
-	fmt.Println(locations.Next)
+	locations, err = pokeapi.GetLocations(locations.Next)
 	if err != nil {
 		return err
 	}
@@ -120,7 +119,7 @@ func commandMapB() error {
 	}
 
 	var err error
-	locations, err = internal.GetLocations(locations.Previous)
+	locations, err = pokeapi.GetLocations(locations.Previous)
 	if err != nil {
 		return err
 	}
