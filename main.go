@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,7 +13,7 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func() error
+	callback    func(args []string) error
 }
 
 var registerOfCommands = map[string]cliCommand{}
@@ -46,6 +47,12 @@ func initCommands() {
 		description: "Displays the previous 20 Pokémon location areas in order. Use repeatedly to explore more locations.",
 		callback:    commandMapB,
 	}
+
+	registerOfCommands["explore"] = cliCommand{
+		name:        "explore",
+		description: "Displays the pokemons found in the stated area",
+		callback:    commandExplore,
+	}
 }
 
 func main() {
@@ -64,11 +71,15 @@ func main() {
 			continue
 		}
 
-		command := strings.ToLower(CleanedInput[0])
+		for i, str := range CleanedInput {
+			CleanedInput[i] = strings.ToLower(str)
+		}
+
+		command := CleanedInput[0]
 
 		if cmd, ok := registerOfCommands[command]; ok {
-			if err := cmd.callback(); err != nil {
-				fmt.Println("Error: ", err)
+			if err := cmd.callback(CleanedInput[1:]); err != nil {
+				fmt.Println(err)
 			}
 		} else {
 			fmt.Println("Unknown command")
@@ -80,13 +91,13 @@ func cleanInput(input string) []string {
 	return strings.Fields(input)
 }
 
-func commandExit() error {
+func commandExit([]string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp() error {
+func commandHelp([]string) error {
 	fmt.Print("Welcome to the Pokedex!\nUsage:\n\n")
 	for _, command := range registerOfCommands {
 		fmt.Println(command.name + ": " + command.description)
@@ -94,7 +105,7 @@ func commandHelp() error {
 	return nil
 }
 
-func commandMap() error {
+func commandMap([]string) error {
 	if locations.Next == "" {
 		fmt.Println("you're on the last page")
 		return nil
@@ -112,7 +123,7 @@ func commandMap() error {
 	return nil
 }
 
-func commandMapB() error {
+func commandMapB([]string) error {
 	if locations.Previous == "" {
 		fmt.Println("you're on the first page")
 		return nil
@@ -127,5 +138,35 @@ func commandMapB() error {
 	for _, location := range locations.Results {
 		fmt.Println(location.Name)
 	}
+	return nil
+}
+
+func commandExplore(input []string) error {
+	if len(input) == 0 {
+		fmt.Println("Missing location")
+		return nil
+	}
+
+	area, err := pokeapi.GetArea("https://pokeapi.co/api/v2/location-area/" + input[0])
+	if err != nil {
+		var HTTPError *pokeapi.HTTPError
+		switch {
+		case errors.As(err, &HTTPError) && HTTPError.StatusCode > 500:
+			fmt.Println("Server side issue")
+			return nil
+		case errors.As(err, &HTTPError) && HTTPError.StatusCode > 400:
+			fmt.Println("Location not found")
+			return nil
+		default:
+			return err
+		}
+	}
+
+	fmt.Println("Exploring" + input[0] + "...")
+	fmt.Println("Found Pokemon:")
+	for _, encounter := range area.PokemonEncounters {
+		fmt.Println(" - " + encounter.Pokemon.Name)
+	}
+
 	return nil
 }
