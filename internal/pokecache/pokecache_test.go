@@ -2,6 +2,7 @@ package pokecache
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 )
@@ -57,4 +58,62 @@ func TestReapLoop(t *testing.T) {
 		t.Errorf("expected to not find key")
 		return
 	}
+}
+
+func TestMuLocking(t *testing.T) {
+	initialTime := time.Now()
+	const waitTime = 500 * time.Millisecond
+	cache := NewCache(5 * time.Millisecond)
+	var wg sync.WaitGroup
+
+	started := make(chan struct{})
+	wg.Add(1)
+	go func() {
+		cache.mu.RLock()
+		started <- struct{}{}
+		defer wg.Done()
+		defer cache.mu.RUnlock()
+		time.Sleep(waitTime)
+	}()
+	<-started
+	cache.Add("http://example.com", []byte("testdata"))
+	if time.Since(initialTime) < waitTime {
+		t.Errorf("expected to wait RLock")
+		return
+	}
+
+	started = make(chan struct{})
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		cache.mu.Lock()
+		started <- struct{}{}
+		defer wg.Done()
+		defer cache.mu.Unlock()
+		time.Sleep(waitTime)
+	}()
+	<-started
+	cache.Get("http://example.com")
+	if time.Since(initialTime) < 2*waitTime {
+		t.Errorf("expected to wait Lock")
+		return
+	}
+
+	started = make(chan struct{})
+	wg.Wait()
+	wg.Add(1)
+	go func() {
+		cache.mu.RLock()
+		started <- struct{}{}
+		defer wg.Done()
+		defer cache.mu.RUnlock()
+		time.Sleep(waitTime)
+	}()
+	<-started
+	cache.Get("http://example.com")
+	if time.Since(initialTime) > 3*waitTime {
+		t.Errorf("expected to not wait RLock")
+		return
+	}
+
 }

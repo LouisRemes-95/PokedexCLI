@@ -18,7 +18,7 @@ type cliCommand struct {
 var registerOfCommands = map[string]cliCommand{}
 
 var locations = pokeapi.LocationAreas{
-	Next:     "https://pokeapi.co/api/v2/location-area",
+	Next:     "https://pokeapi.co/api/v2/location-area?offset=0&limit=20",
 	Previous: "",
 }
 
