@@ -17,6 +17,11 @@ type cliCommand struct {
 
 var registerOfCommands = map[string]cliCommand{}
 
+var locations = internal.LocationAreas{
+	Next:     "https://pokeapi.co/api/v2/location-area",
+	Previous: "",
+}
+
 func initCommands() {
 	registerOfCommands["help"] = cliCommand{
 		name:        "help",
@@ -29,13 +34,23 @@ func initCommands() {
 		description: "Exit the Pokedex",
 		callback:    commandExit,
 	}
+
+	registerOfCommands["map"] = cliCommand{
+		name:        "map",
+		description: "Displays the next 20 Pokémon location areas in order. Use repeatedly to explore more locations.",
+		callback:    commandMap,
+	}
+
+	registerOfCommands["mapb"] = cliCommand{
+		name:        "mapb",
+		description: "Displays the previous 20 Pokémon location areas in order. Use repeatedly to explore more locations.",
+		callback:    commandMapB,
+	}
 }
 
 func main() {
 
 	initCommands()
-
-	fmt.Print(internal.GetLocation(1))
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -75,6 +90,43 @@ func commandHelp() error {
 	fmt.Println("Welcome to the Pokedex!\nUsage:\n")
 	for _, command := range registerOfCommands {
 		fmt.Println(command.name + ": " + command.description)
+	}
+	return nil
+}
+
+func commandMap() error {
+	if locations.Next == "" {
+		fmt.Println("you're on the last page")
+		return nil
+	}
+
+	var err error
+	locations, err = internal.GetLocations(locations.Next)
+	fmt.Println(locations.Next)
+	if err != nil {
+		return err
+	}
+
+	for _, location := range locations.Results {
+		fmt.Println(location.Name)
+	}
+	return nil
+}
+
+func commandMapB() error {
+	if locations.Previous == "" {
+		fmt.Println("you're on the first page")
+		return nil
+	}
+
+	var err error
+	locations, err = internal.GetLocations(locations.Previous)
+	if err != nil {
+		return err
+	}
+
+	for _, location := range locations.Results {
+		fmt.Println(location.Name)
 	}
 	return nil
 }
